@@ -91,9 +91,3 @@ npx ts-node src/index.ts
 
 ---
 
-## Author
-
-Your Name
-
----
-
