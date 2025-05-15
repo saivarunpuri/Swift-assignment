@@ -82,16 +82,6 @@ npx ts-node src/index.ts
 
 ---
 
-## Testing
-
-Use the included Postman collection (`postman_collection.json`) to test the API quickly:
-
-1. Open Postman
-2. Import the collection
-3. Run the requests against your local server at `http://localhost:3000`
-
----
-
 ## Technologies Used
 
 * Node.js (HTTP module)
