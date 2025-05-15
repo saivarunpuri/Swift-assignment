@@ -1,4 +1,5 @@
 import https from "https";
+import { IncomingMessage, ServerResponse } from "http";
 import { getDB } from "../models/db";
 import { User, Post, Comment } from "../models/user";
 
@@ -13,7 +14,7 @@ function fetchJSON(url: string): Promise<any> {
   });
 }
 
-export async function loadData(res: any) {
+export async function loadData(res: ServerResponse) {
   try {
     const db = getDB();
 
@@ -46,7 +47,7 @@ export async function loadData(res: any) {
   }
 }
 
-export async function getUser(userId: number, res: any) {
+export async function getUser(userId: number, res: ServerResponse) {
   try {
     const db = getDB();
 
@@ -78,7 +79,37 @@ export async function getUser(userId: number, res: any) {
   }
 }
 
-export async function deleteAllUsers(res: any) {
+export async function getUsers(req: IncomingMessage, res: ServerResponse) {
+  try {
+    const db = getDB();
+    const url = new URL(req.url || "", `http://${req.headers.host}`);
+    const page = parseInt(url.searchParams.get("page") || "1", 10);
+    const limit = parseInt(url.searchParams.get("limit") || "10", 10);
+    const skip = (page - 1) * limit;
+
+    // Sorting support
+    const sortParam = url.searchParams.get("sort") || "";
+    let sort: { [key: string]: 1 | -1 } = {};
+    if (sortParam === "name_asc") sort = { name: 1 };
+    else if (sortParam === "name_desc") sort = { name: -1 };
+
+    const users = await db
+      .collection<User>("users")
+      .find({})
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(users));
+  } catch (error) {
+    res.writeHead(500);
+    res.end(JSON.stringify({ error: "Failed to fetch users" }));
+  }
+}
+
+export async function deleteAllUsers(res: ServerResponse) {
   try {
     const db = getDB();
     await db.collection("users").deleteMany({});
@@ -94,7 +125,7 @@ export async function deleteAllUsers(res: any) {
   }
 }
 
-export async function deleteUserById(userId: number, res: any) {
+export async function deleteUserById(userId: number, res: ServerResponse) {
   try {
     const db = getDB();
 
@@ -105,7 +136,7 @@ export async function deleteUserById(userId: number, res: any) {
       return;
     }
 
-    // Delete user's posts first to get post IDs to delete comments
+    // Delete user's posts and their comments
     const userPosts = await db.collection<Post>("posts").find({ userId }).toArray();
     const postIds = userPosts.map((p) => p.id);
 
@@ -122,7 +153,7 @@ export async function deleteUserById(userId: number, res: any) {
   }
 }
 
-export async function putUser(newUser: User, res: any) {
+export async function putUser(newUser: User, res: ServerResponse) {
   try {
     const db = getDB();
 

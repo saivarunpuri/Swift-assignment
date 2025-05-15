@@ -1,17 +1,33 @@
 import { IncomingMessage, ServerResponse } from "http";
-import { loadData, getUser, deleteAllUsers, deleteUserById, putUser } from "../controllers/userController";
+import {
+  loadData,
+  getUser,
+  getUsers,
+  deleteAllUsers,
+  deleteUserById,
+  putUser,
+} from "../controllers/userController";
 
 export async function handleUserRoutes(req: IncomingMessage, res: ServerResponse) {
   const url = req.url || "";
   const method = req.method || "";
 
-  if (method === "GET" && url === "/load") {
+  // Parse full URL to handle query parameters
+  const urlObj = new URL(url, `http://${req.headers.host}`);
+
+  if (method === "GET" && urlObj.pathname === "/load") {
     await loadData(res);
     return;
   }
 
-  if (method === "GET" && url.startsWith("/users/")) {
-    const userId = parseInt(url.split("/")[2], 10);
+  // Handle GET /users with pagination & sorting
+  if (method === "GET" && urlObj.pathname === "/users") {
+    await getUsers(req, res);
+    return;
+  }
+
+  if (method === "GET" && urlObj.pathname.startsWith("/users/")) {
+    const userId = parseInt(urlObj.pathname.split("/")[2], 10);
     if (isNaN(userId)) {
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Invalid userId" }));
@@ -21,13 +37,13 @@ export async function handleUserRoutes(req: IncomingMessage, res: ServerResponse
     return;
   }
 
-  if (method === "DELETE" && url === "/users") {
+  if (method === "DELETE" && urlObj.pathname === "/users") {
     await deleteAllUsers(res);
     return;
   }
 
-  if (method === "DELETE" && url.startsWith("/users/")) {
-    const userId = parseInt(url.split("/")[2], 10);
+  if (method === "DELETE" && urlObj.pathname.startsWith("/users/")) {
+    const userId = parseInt(urlObj.pathname.split("/")[2], 10);
     if (isNaN(userId)) {
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Invalid userId" }));
@@ -37,7 +53,7 @@ export async function handleUserRoutes(req: IncomingMessage, res: ServerResponse
     return;
   }
 
-  if (method === "PUT" && url === "/users") {
+  if (method === "PUT" && urlObj.pathname === "/users") {
     let body = "";
     req.on("data", (chunk) => {
       body += chunk;
@@ -46,7 +62,6 @@ export async function handleUserRoutes(req: IncomingMessage, res: ServerResponse
       try {
         const userData = JSON.parse(body);
 
-        // Validate userData shape minimally here or inside putUser
         if (!userData.id) {
           res.writeHead(400, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ error: "User ID is required" }));
