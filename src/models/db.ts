@@ -1,6 +1,6 @@
 import { MongoClient, Db } from "mongodb";
 
-const MONGO_URI = "mongodb://127.0.0.1:27017";
+const MONGO_URI = process.env.MONGO_URI|| "mongodb://127.0.0.1:27017";
 const DB_NAME = "swift-assignment";
 
 const client = new MongoClient(MONGO_URI);
